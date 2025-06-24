@@ -1,0 +1,44 @@
+# Logs
+**/logs
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# Dependency directories
+**/node_modules/
+
+# Env files (do NOT commit secrets)
+**/.env
+**/.env.*
+
+# Compiled output
+**/dist/
+**/build/
+
+# OS-specific junk
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Docker artifacts
+**/.docker/
+**/Dockerfile.*
+**/docker-compose.override.yml
+
+# Optional: test coverage, caches
+**/coverage/
+**/.nyc_output/
+**/.cache/
+
+# Optional: debug dumps
+*.tgz
+*.swp
+*.bak
+
+# Optional: next.js or react output
+.next/
+out/
