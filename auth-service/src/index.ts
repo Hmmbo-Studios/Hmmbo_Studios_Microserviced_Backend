@@ -3,15 +3,17 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import authRoutes from "./routes/authRoutes";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 const app = express();
 
 app.use(cors({}));
 // allow preflight checks
-
+app.use(cookieParser());
 app.use(express.json());
 app.use("/api/auth", authRoutes);
+
 
 mongoose
   .connect(process.env.MONGO_URI!)

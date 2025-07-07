@@ -3,10 +3,25 @@ import { User } from "../models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+// Helper to generate JWT
+const generateToken = (userId: string) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET!, {
+    expiresIn: "1h",
+  });
+};
+
+// Helper to set cookie
+const setTokenCookie = (res: Response, token: string) => {
+  res.cookie("token", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 3600 * 1000, // 1 hour
+  });
+};
+
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("🔥 Incoming body:", req.body);
-    const { email, password } = req.body;
+    const { email, password, username } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -15,44 +30,47 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new User({ email, password: hashedPassword });
+    const user = new User({
+      email,
+      password: hashedPassword,
+      username,
+    });
     await user.save();
 
-    res
-      .status(201)
-      .json({ message: "User registered", username: user.username });
+    const token = generateToken(user._id.toString());
+    setTokenCookie(res, token);
+
+    res.status(201).json({
+      message: "User registered",
+      username: user.username,
+      token, // optional if you rely only on cookie
+    });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Register Error:", err);
     res.status(500).json({ error: "Registration failed" });
   }
 };
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("🔥 Incoming body:", req.body);
-
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });
-    if (!user) {
+    if (!user || !(await bcrypt.compare(password, user.password))) {
       res.status(400).json({ error: "Invalid credentials" });
       return;
     }
 
-    const valid = await bcrypt.compare(password, user.password);
-    if (!valid) {
-      res.status(400).json({ error: "Invalid credentials" });
-      return;
-    }
+    const token = generateToken(user._id.toString());
+    setTokenCookie(res, token);
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET!, {
-      expiresIn: "1h",
+    res.json({
+      message: "Logged in successfully",
+      username: user.username,
+      token, // optional if you rely only on cookie
     });
-
-    res.json({ token, username: user.username });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Login Error:", err);
     res.status(500).json({ error: "Login failed" });
   }
 };
@@ -75,7 +93,7 @@ export const me = async (req: Request, res: Response): Promise<void> => {
 
     res.json(user);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Me Error:", err);
     res.status(500).json({ error: "Could not fetch user info" });
   }
 };

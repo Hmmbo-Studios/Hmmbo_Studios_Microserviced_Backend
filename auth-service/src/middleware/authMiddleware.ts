@@ -15,21 +15,29 @@ declare global {
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
+  const tokenFromHeader = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : null;
+  const tokenFromCookie = req.cookies?.token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-     res.status(401).json({ error: 'Unauthorized' });
-     return;
+  const token = tokenFromHeader || tokenFromCookie;
+
+  if (!token) {
+    console.log("❌ No token provided");
+    res.status(401).json({ error: "Unauthorized: No token" });
+    return;
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
     req.user = payload;
     next();
   } catch (err) {
-     res.status(401).json({ error: 'Invalid or expired token' });
-     return;
+    console.log("❌ Invalid or expired token");
+    res.clearCookie("token", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    });
+
+    res.status(401).json({ error: "Invalid or expired token" });
   }
-  return;
 };
